@@ -1,122 +1,578 @@
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>看板比較ナビ｜大学周辺OOHの比較レポート（24時間以内）</title>
-  <meta name="description" content="大学周辺の看板／駅貼り／サイネージを目的・期間・予算に沿って3–5案に絞り、比較レポートでご提供します（原則24時間）。広告枠の販売は行わず、情報提供・比較支援のみ。" />
-  <meta property="og:title" content="看板比較ナビ" />
-  <meta property="og:description" content="大学周辺OOHの比較レポート（原則24時間）。広告枠の販売は行わず、情報提供・比較支援のみ。" />
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="ja_JP" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root{--brand:#059669}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
-    a{color:var(--brand)}
-    .container{max-width:1100px}
-  </style>
-</head>
-<body class="bg-gradient-to-b from-emerald-50 via-sky-50 to-white text-gray-900">
-  <header class="sticky top-0 z-30 border-b border-gray-200/70 bg-white/80 backdrop-blur">
-    <div class="container mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-semibold">看</div>
-        <div class="text-base font-semibold tracking-tight">看板比較ナビ</div>
-        <span class="hidden md:inline-flex items-center rounded-full border px-3 py-1 text-sm text-emerald-900 bg-emerald-50 border-emerald-200 ml-2">24時間以内に比較</span>
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  CreditCard,
+  Shield,
+  Mail,
+  Building2,
+  Monitor,
+  Store,
+  FileText,
+} from "lucide-react";
+
+/**
+ * 看板比較ナビ — LP 完全版（React / Tailwind / 単一ファイル）
+ * - Stripe本番リンクを設定
+ * - フォーム送信時の文言を本番用に調整
+ * - configを先頭で定義し、参照時の未定義エラーを防止
+ * - スモークテスト（console.assert）を追加
+ */
+
+const config = {
+  brandName: "看板比較ナビ",
+  tagline: "大学周辺の看板／駅貼り／サイネージを、24時間以内に比較",
+  primaryCtaText: "¥15,000で比較レポートを依頼",
+  // ★ ここを Stripe の本番 Payment Link に差し替え済み
+  primaryCtaLink: "https://buy.stripe.com/3cIcN6bY70wYahidMX4ZG00",
+  supportEmail: "kanbanhikaku@gmail.com",
+  legal: {
+    sellerName: "倉岡 陸歩",
+    tradeName: "看板比較ナビ",
+    address: "（請求があれば遅滞なく開示）",
+    phone: "（請求があれば遅滞なく開示）",
+    email: "kanbanhikaku@gmail.com",
+    hours: "平日10:00–18:00（祝日除く）",
+    invoiceNumber: "（適格請求書発行事業者：未登録）",
+    payment: "Stripe（クレジットカード）での先払い",
+    delivery:
+      "要件確定後、原則24時間以内に比較レポートを納品。状況によってはそれ以上かかる場合がありますが、その場合は必ずご連絡いたします。",
+    returns: "役務提供の性質上、返金はできません（法令に基づく場合を除く）。",
+  },
+};
+
+// --- 事前スモークテスト（UIに影響しません） ---
+function runSmokeTests() {
+  console.assert(typeof config === "object", "config must be defined");
+  console.assert(config.supportEmail.includes("@"), "supportEmail should contain @");
+  console.assert(config.legal.email === config.supportEmail, "legal.email mirrors supportEmail");
+  console.assert(config.primaryCtaText.includes("¥15,000"), "CTA text includes price");
+  console.assert(config.tagline.includes("24時間"), "tagline mentions 24時間");
+  // ナビ用IDの存在検査（レンダ後に通る）
+  setTimeout(() => {
+    ["how", "pricing", "form", "faq", "privacy", "terms", "legal"].forEach((id) => {
+      const el = document.getElementById(id);
+      console.assert(el, `section #${id} should exist`);
+    });
+  }, 0);
+}
+
+const Section = ({ id, className = "", children }) => (
+  <section id={id} className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>
+    {children}
+  </section>
+);
+
+const Pill = ({ children }) => (
+  <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm text-emerald-900 bg-emerald-50 backdrop-blur border-emerald-200 shadow-sm">
+    {children}
+  </span>
+);
+
+const FeatureCard = ({ icon: Icon, title, children }) => (
+  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="flex items-center gap-3">
+      <div className="rounded-xl border border-gray-200 p-2">
+        <Icon className="h-5 w-5" aria-hidden />
       </div>
-      <nav class="hidden md:flex items-center gap-6 text-sm text-gray-700">
-        <a href="#about" class="hover:text-black">概要</a>
-        <a href="#pricing" class="hover:text-black">料金</a>
-        <a href="#flow" class="hover:text-black">流れ</a>
-        <a href="#legal" class="hover:text-black">特商法</a>
-        <a href="#privacy" class="hover:text-black">プライバシー</a>
-        <a href="#contact" class="hover:text-black">連絡先</a>
-      </nav>
-      <a id="cta" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">¥15,000で依頼</a>
+      <h3 className="text-base font-semibold">{title}</h3>
     </div>
-  </header>
+    <div className="mt-3 text-sm leading-6 text-gray-600">{children}</div>
+  </div>
+);
 
-  <main>
-    <!-- Hero -->
-    <section class="container mx-auto px-4 pt-14 pb-10" id="about">
-      <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">大学周辺OOHの比較レポートを、<span class="text-emerald-700">原則24時間</span>で</h1>
-      <p class="mt-4 max-w-2xl text-gray-700">看板比較ナビは、在庫を大量に並べるのではなく、<strong>目的・期間・月予算</strong>に沿って <strong>駅・商業・路面・店頭・DOOH</strong>から候補を3–5案に絞り込み、<strong>比較レポート（PDF/スプレッドシート）</strong>でご提供します。<br/>広告枠の販売は行わず、<strong>情報提供・比較支援のみ</strong>を行います。</p>
-      <div class="mt-6 flex flex-wrap items-center gap-3">
-        <a href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">¥15,000で依頼</a>
-        <a href="#contact" class="text-sm font-semibold underline underline-offset-4">問い合わせメール</a>
+const Step = ({ step, title, icon: Icon, children }) => (
+  <div className="relative rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
+      STEP {step}
+    </div>
+    <div className="flex items-center gap-3">
+      <div className="rounded-xl border border-gray-200 p-2">
+        <Icon className="h-5 w-5" aria-hidden />
       </div>
-      <p class="mt-3 text-xs text-gray-500">※決済リンクはStripe本登録後に差し替えます。</p>
-    </section>
+      <h3 className="text-base font-semibold">{title}</h3>
+    </div>
+    <div className="mt-3 text-sm leading-6 text-gray-600">{children}</div>
+  </div>
+);
 
-    <!-- Pricing -->
-    <section class="container mx-auto px-4 py-10" id="pricing">
-      <div class="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h2 class="text-xl font-bold">料金</h2>
-        <p class="mt-3 text-3xl font-extrabold">¥15,000<span class="text-base font-medium text-gray-500">（税込・前払い）</span></p>
-        <ul class="mt-4 list-disc pl-5 text-sm text-gray-700">
-          <li>3–5案の比較表（PDF/スプレッドシート）</li>
-          <li>掲出可否／最短開始／最低期間／概算月額</li>
-          <li>写真／地図リンク／備考（訴求メモ）</li>
-        </ul>
-        <p class="mt-2 text-xs text-gray-500">※案件状況により点数・内容は調整される場合があります。</p>
-      </div>
-    </section>
+export default function Landing() {
+  const [form, setForm] = useState({
+    goal: "",
+    period: "",
+    budget: "",
+    contact: "",
+    company: "",
+    campus: "",
+    memo: "",
+  });
 
-    <!-- Flow -->
-    <section class="container mx-auto px-4 py-10" id="flow">
-      <h2 class="text-xl font-bold">提供の流れ</h2>
-      <ol class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-        <li class="rounded-2xl border border-gray-200 bg-white p-5"><strong>STEP1 要件送付</strong><br/>目的・期間・月予算・想定キャンパスを共有</li>
-        <li class="rounded-2xl border border-gray-200 bg-white p-5"><strong>STEP2 リサーチ（原則24h）</strong><br/>最新情報を収集し候補を3–5案に絞り込み</li>
-        <li class="rounded-2xl border border-gray-200 bg-white p-5"><strong>STEP3 レポート納品</strong><br/>場所・サイズ・概算月額・開始時期・写真等を一覧</li>
-        <li class="rounded-2xl border border-gray-200 bg-white p-5"><strong>STEP4 契約は仲介へ</strong><br/>見積・発注は仲介各社に直接。 当方は情報提供のみ</li>
-      </ol>
-    </section>
+  useEffect(() => {
+    runSmokeTests();
+  }, []);
 
-    <!-- Legal (特商法) -->
-    <section class="container mx-auto px-4 py-10" id="legal">
-      <h2 class="text-xl font-bold">特定商取引法に基づく表記</h2>
-      <div class="mt-4 grid gap-3 text-sm">
-        <p><span class="font-semibold">事業者の氏名（名称）：</span>倉岡 陸歩（屋号：看板比較ナビ）</p>
-        <p><span class="font-semibold">所在地：</span>（請求があれば遅滞なく開示）</p>
-        <p><span class="font-semibold">電話番号：</span>（請求があれば遅滞なく開示）</p>
-        <p><span class="font-semibold">メールアドレス：</span><a href="mailto:kanbanhikaku@gmail.com" class="underline">kanbanhikaku@gmail.com</a></p>
-        <p><span class="font-semibold">営業時間：</span>平日10:00–18:00（祝日除く）</p>
-        <p><span class="font-semibold">販売価格：</span>比較レポート 一律 ¥15,000（税込）</p>
-        <p><span class="font-semibold">代金の支払方法・時期：</span>クレジットカード（Stripe）による前払い</p>
-        <p><span class="font-semibold">役務の提供時期：</span>着金確認後、原則24時間以内に比較レポートを納品</p>
-        <p><span class="font-semibold">返品・キャンセル：</span>役務の性質上、返金不可（法令に基づく場合を除く）</p>
-        <p class="text-xs text-gray-500">※個人事業主の特例により、所在地・電話番号は「請求があれば遅滞なく開示」の運用も選択可能です。</p>
-      </div>
-    </section>
+  const onSubmit = (e) => {
+    e.preventDefault();
+    // 本番用：とりあえずはメールで相談してもらう運用に寄せる
+    const bodyLines = [
+      "以下の内容で比較レポートの相談をしたいです。",
+      "",
+      `目的: ${form.goal}`,
+      `期間: ${form.period}`,
+      `月予算: ${form.budget}`,
+      `想定キャンパス/エリア: ${form.campus}`,
+      `会社名: ${form.company}`,
+      `連絡先メール: ${form.contact}`,
+      `補足: ${form.memo}`,
+      "",
+      "看板比較ナビ LP フォームより",
+    ];
 
-    <!-- Privacy -->
-    <section class="container mx-auto px-4 py-10" id="privacy">
-      <h2 class="text-xl font-bold">プライバシーポリシー（要点）</h2>
-      <ul class="mt-3 list-disc pl-5 text-sm text-gray-700">
-        <li><strong>取得する情報：</strong>氏名・会社名・メール・要件等。カード情報は決済事業者（Stripe）が処理し、当方は保持しません。</li>
-        <li><strong>利用目的：</strong>見積・提案・連絡、サービス改善、法令遵守。</li>
-        <li><strong>第三者提供：</strong>法令に基づく場合を除き本人同意なく提供しません。見積取得等で必要な範囲で仲介・媒体社と共有する場合があります。</li>
-        <li><strong>安全管理：</strong>アクセス制限、暗号化通信等の合理的措置。</li>
-        <li><strong>開示等の請求：</strong><a href="mailto:kanbanhikaku@gmail.com" class="underline">kanbanhikaku@gmail.com</a> までご連絡ください。</li>
-      </ul>
-    </section>
+    const params = new URLSearchParams({
+      subject: "【看板比較ナビ】比較レポートの相談",
+      body: bodyLines.join("\n"),
+    });
 
-    <!-- Contact -->
-    <section class="container mx-auto px-4 pb-16" id="contact">
-      <h2 class="text-xl font-bold">連絡先</h2>
-      <p class="mt-3 text-sm">メール：<a class="underline" href="mailto:kanbanhikaku@gmail.com">kanbanhikaku@gmail.com</a></p>
-      <p class="mt-1 text-xs text-gray-500">※決済や領収書はStripeから自動送信されます。</p>
-      <p class="mt-8 text-xs text-gray-500">© <span id="y"></span> 看板比較ナビ</p>
-    </section>
-  </main>
+    window.location.href = `mailto:${config.supportEmail}?${params.toString()}`;
+  };
 
-  <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
-  </script>
-</body>
-</html>
+  const openStripe = () => {
+    window.open(config.primaryCtaLink, "_blank", "noopener");
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-sky-50 to-white text-gray-900">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-gray-200/70 bg-white/70 backdrop-blur">
+        <Section className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-semibold">
+              {config.brandName.slice(0, 1)}
+            </div>
+            <div className="text-base font-semibold tracking-tight">{config.brandName}</div>
+            <div className="hidden md:block">
+              <Pill>24時間以内に比較</Pill>
+            </div>
+          </div>
+          <nav className="hidden items-center gap-6 text-sm text-gray-700 md:flex">
+            <a href="#how" className="hover:text-black">
+              流れ
+            </a>
+            <a href="#pricing" className="hover:text-black">
+              料金
+            </a>
+            <a href="#form" className="hover:text-black">
+              申込み
+            </a>
+            <a href="#faq" className="hover:text-black">
+              FAQ
+            </a>
+            <a href="#privacy" className="hover:text-black">
+              プライバシー
+            </a>
+            <a href="#terms" className="hover:text-black">
+              利用規約
+            </a>
+            <a href="#legal" className="hover:text-black">
+              特商法
+            </a>
+          </nav>
+          <button
+            onClick={openStripe}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+          >
+            {config.primaryCtaText} <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
+        </Section>
+      </header>
+
+      {/* Hero */}
+      <Section className="pt-14 pb-10">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <Pill>24時間以内に比較</Pill>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">{config.tagline}</h1>
+            <p className="mt-4 max-w-xl text-gray-600">
+              {config.brandName} は、在庫を大量に並べるのではなく、目的・期間・月予算に沿って
+              <span className="font-semibold text-gray-900"> 駅・商業・路面・店頭・DOOH </span>
+              の中から候補を絞り込み、比較表でご提供します。契約は仲介と直接、当方は紹介/情報提供のみです。
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                onClick={openStripe}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+              >
+                {config.primaryCtaText} <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
+            <a href="#form" className="text-sm font-semibold underline-offset-4 hover:underline">
+              まずは要件を送る
+            </a>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              上記ボタンから Stripe の決済ページ（外部サイト）に遷移します。
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FeatureCard icon={Building2} title="駅・商業施設">
+                駅構内/駅前、商業施設内のボードやサイネージ。
+              </FeatureCard>
+              <FeatureCard icon={Store} title="路面・店頭">
+                大学最寄り動線の路面看板や店頭広告。
+              </FeatureCard>
+              <FeatureCard icon={Monitor} title="DOOH(デジタル)">
+                街頭/施設サイネージ。柔軟な掲出期間。
+              </FeatureCard>
+              <FeatureCard icon={FileText} title="比較レポート">
+                3–5案の比較表で意思決定を高速化。
+              </FeatureCard>
+            </div>
+          </motion.div>
+        </div>
+      </Section>
+
+      {/* Flow */}
+      <Section id="how" className="py-14">
+        <h2 className="text-2xl font-bold tracking-tight">提供の流れ</h2>
+        <p className="mt-2 text-sm text-gray-600">対象：大学“周辺”OOH（駅・商業・路面・店頭、DOOH含む）</p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Step step={1} title="要件を送る" icon={Mail}>
+            目的、期間、月予算、想定キャンパスをフォームまたはメールで共有。
+          </Step>
+          <Step step={2} title="リサーチ（原則24h）" icon={Clock}>
+            最新情報を収集し、候補を3–5案に絞り込み。
+          </Step>
+          <Step step={3} title="比較レポ納品" icon={Shield}>
+            場所・サイズ・概算月額・最短開始・最低期間・写真・備考を一覧化。
+          </Step>
+          <Step step={4} title="見積/発注は仲介へ" icon={CreditCard}>
+            実際の見積取得・契約は、仲介や媒体社と直接やり取りいただきます。当方は紹介/情報提供のみです。
+          </Step>
+        </div>
+      </Section>
+
+      {/* Pricing */}
+      <Section id="pricing" className="py-14">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-gray-200 p-2">
+                <Clock className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-semibold">24h 比較レポート</h3>
+            </div>
+            <p className="mt-3 text-3xl font-extrabold">
+              ¥15,000<span className="text-base font-medium text-gray-500">（税込）</span>
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li className="flex gap-2">
+                <Check className="mt-0.5 h-4 w-4" /> 3–5案の比較表（PDF/スプレッドシート）
+              </li>
+              <li className="flex gap-2">
+                <Check className="mt-0.5 h-4 w-4" /> 掲出可否/最短開始/最低期間/概算月額
+              </li>
+              <li className="flex gap-2">
+                <Check className="mt-0.5 h-4 w-4" /> 写真/地図リンク/備考（訴求メモ）
+              </li>
+            </ul>
+            <p className="mt-2 text-xs text-gray-500">
+              ※上記は基本構成です。案件状況により内容や点数は調整される場合があります。
+            </p>
+            <button
+              onClick={openStripe}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+            >
+              {config.primaryCtaText} <ArrowRight className="h-4 w-4" />
+            </button>
+            <p className="mt-2 text-xs text-gray-500">
+              ボタンを押すと Stripe の決済ページ（外部サイト）が開きます。
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h3 className="text-lg font-semibold">ガードレール / 法務配慮</h3>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li className="flex gap-2">
+                <Shield className="mt-0.5 h-4 w-4" />
+                <span>「最安/No.1」等の比較優位表現は根拠がある場合のみ使用し、基本的には控えます。</span>
+              </li>
+              <li className="flex gap-2">
+                <Shield className="mt-0.5 h-4 w-4" />
+                <span>当サイトは情報提供/比較支援であり、広告の販売・契約の当事者にはなりません。</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Section>
+
+      {/* Form */}
+      <Section id="form" className="py-14">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">申込みフォーム（所要2分）</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              入力後、「送信して相談を開始」を押すと、入力内容を反映したメール作成画面が開きます。
+            </p>
+            <form onSubmit={onSubmit} className="mt-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium">目的（自由記述）</label>
+                <input
+                  required
+                  value={form.goal}
+                  onChange={(e) => setForm({ ...form, goal: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                  placeholder="例）ブランド認知向上／サービス無料体験申込200件/週"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium">期間</label>
+                  <input
+                    required
+                    value={form.period}
+                    onChange={(e) => setForm({ ...form, period: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    placeholder="例）2026/3〜2026/4の2ヶ月"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">月予算（税別）</label>
+                  <input
+                    required
+                    value={form.budget}
+                    onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    placeholder="例）20万円"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium">想定キャンパス/エリア</label>
+                  <input
+                    value={form.campus}
+                    onChange={(e) => setForm({ ...form, campus: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    placeholder="例）東大前/本郷三丁目 周辺"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">会社名（任意）</label>
+                  <input
+                    value={form.company}
+                    onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    placeholder="例）◯◯株式会社"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">連絡先メール</label>
+                <input
+                  type="email"
+                  required
+                  value={form.contact}
+                  onChange={(e) => setForm({ ...form, contact: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                  placeholder="your@company.co.jp"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">補足（任意）</label>
+                <textarea
+                  value={form.memo}
+                  onChange={(e) => setForm({ ...form, memo: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                  rows={4}
+                  placeholder="訴求したい内容、避けたい場所 など"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+                >
+                  送信して相談を開始 <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(`mailto:${config.supportEmail}`, "_blank")}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+                >
+                  <Mail className="h-4 w-4" /> メールで直接相談
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Section>
+
+      {/* FAQ */}
+      <Section id="faq" className="pb-16 pt-8">
+        <h2 className="text-2xl font-bold tracking-tight">FAQ</h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+            <p className="font-semibold">本当に24時間で出ますか？</p>
+            <p className="mt-2 text-sm text-gray-600">
+              原則24時間以内に比較レポートをお出しします。状況によってはそれ以上かかる場合がありますが、その際は必ずご連絡いたします。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+            <p className="font-semibold">対象エリアは？</p>
+            <p className="mt-2 text-sm text-gray-600">
+              全国主要都市の大学“周辺”をカバー。駅構内/駅前・商業施設・路面/店頭・DOOHが中心です。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+            <p className="font-semibold">契約・見積の流れは？</p>
+            <p className="mt-2 text-sm text-gray-600">
+              当サイトは比較レポートを提供し、実際の契約や見積取得はご自身で仲介会社へ直接お問い合わせいただく形となります。
+            </p>
+          </div>
+        </div>
+        <p className="mt-8 text-xs text-gray-500">
+          © {new Date().getFullYear()} {config.brandName}. All rights reserved.
+        </p>
+      </Section>
+
+      {/* Privacy */}
+      <Section id="privacy" className="py-14">
+        <h2 className="text-2xl font-bold tracking-tight">プライバシーポリシー（抜粋）</h2>
+        <div className="mt-6 grid gap-3 text-sm">
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">取得する情報</p>
+            <p className="mt-1 text-gray-700">
+              フォームに入力された氏名・会社名・メールアドレス・要件等。決済は決済事業者（Stripe）で処理され、当方はカード番号等を保持しません。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">利用目的</p>
+            <p className="mt-1 text-gray-700">見積・提案・連絡、サービス改善、法令遵守。</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">第三者提供</p>
+            <p className="mt-1 text-gray-700">
+              法令に基づく場合を除き、本人の同意なく第三者提供しません。見積取得等で必要な範囲で仲介・媒体社と共有する場合があります。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">安全管理</p>
+            <p className="mt-1 text-gray-700">
+              アクセス制限や暗号化通信等、合理的な安全管理措置を講じます。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">開示等の請求</p>
+            <p className="mt-1 text-gray-700">
+              開示・訂正・利用停止等のご請求は、
+              <a className="underline" href={`mailto:${config.legal.email}`}>
+                {config.legal.email}
+              </a>{" "}
+              までご連絡ください。
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* Terms */}
+      <Section id="terms" className="py-14">
+        <h2 className="text-2xl font-bold tracking-tight">利用規約（抜粋）</h2>
+        <div className="mt-6 grid gap-3 text-sm">
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">1. 役務の範囲</p>
+            <p className="mt-1 text-gray-700">
+              本サービスは屋外広告（看板／駅貼り／サイネージ等）の比較情報提供および仲介先の紹介を行うもので、広告媒体の販売・契約当事者にはなりません。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">2. 料金・支払</p>
+            <p className="mt-1 text-gray-700">
+              比較レポートは Stripe によるクレジットカード前払いとします。契約・見積の取得は利用者ご自身で仲介会社に直接お問い合わせください。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">3. 返金</p>
+            <p className="mt-1 text-gray-700">
+              役務の性質上、返金はできません（法令に基づく場合を除く）。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">4. 免責</p>
+            <p className="mt-1 text-gray-700">
+              価格・在庫・開始時期等は媒体社・仲介各社の回答に依存し変動します。最終決定は当該事業者との契約条件に従います。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p className="font-semibold">5. 禁止事項</p>
+            <p className="mt-1 text-gray-700">
+              虚偽情報の提供、法令・ガイドラインに反するクリエイティブの入稿、第三者の権利侵害等。
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* Legal */}
+      <Section id="legal" className="py-14">
+        <h2 className="text-2xl font-bold tracking-tight">特定商取引法に基づく表記</h2>
+        <div className="mt-6 grid gap-3 text-sm">
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p>
+              <span className="font-semibold">事業者の氏名（名称）：</span>
+              {config.legal.sellerName}（屋号：{config.legal.tradeName}）
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">所在地：</span>
+              {config.legal.address}
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">電話番号：</span>
+              {config.legal.phone}
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">メールアドレス：</span>
+              <a className="underline" href={`mailto:${config.legal.email}`}>
+                {config.legal.email}
+              </a>
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">営業時間：</span>
+              {config.legal.hours}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <p>
+              <span className="font-semibold">販売価格：</span>
+              比較レポート 一律 ¥15,000（税込）
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">代金の支払方法・時期：</span>
+              {config.legal.payment}
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">役務の提供時期：</span>
+              {config.legal.delivery}
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">返品・キャンセル：</span>
+              {config.legal.returns}
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold">適格請求書発行事業者：</span>
+              {config.legal.invoiceNumber}
+            </p>
+          </div>
+          <p className="text-xs text-gray-500">
+            ※個人事業主の特例により、所在地・電話番号は「請求があれば遅滞なく開示」の運用も選択可能です。実運用に応じて記載方式をご調整ください。
+          </p>
+        </div>
+      </Section>
+    </div>
+  );
+}
