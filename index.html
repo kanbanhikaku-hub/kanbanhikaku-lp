@@ -1,578 +1,672 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  Check,
-  Clock,
-  CreditCard,
-  Shield,
-  Mail,
-  Building2,
-  Monitor,
-  Store,
-  FileText,
-} from "lucide-react";
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>看板比較ナビ｜大学周辺OOHの比較レポート（24時間以内）</title>
+    <meta
+      name="description"
+      content="大学周辺の看板／駅貼り／サイネージを目的・期間・予算に沿って3–5案に絞り、比較レポートでご提供します（原則24時間）。広告枠の販売は行わず、情報提供・比較支援のみのサービスです。"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:title" content="看板比較ナビ" />
+    <meta
+      property="og:description"
+      content="大学周辺OOHの比較レポート（原則24時間）。広告枠の販売は行わず、情報提供・比較支援のみ。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ja_JP" />
 
-/**
- * 看板比較ナビ — LP 完全版（React / Tailwind / 単一ファイル）
- * - Stripe本番リンクを設定
- * - フォーム送信時の文言を本番用に調整
- * - configを先頭で定義し、参照時の未定義エラーを防止
- * - スモークテスト（console.assert）を追加
- */
-
-const config = {
-  brandName: "看板比較ナビ",
-  tagline: "大学周辺の看板／駅貼り／サイネージを、24時間以内に比較",
-  primaryCtaText: "¥15,000で比較レポートを依頼",
-  // ★ ここを Stripe の本番 Payment Link に差し替え済み
-  primaryCtaLink: "https://buy.stripe.com/3cIcN6bY70wYahidMX4ZG00",
-  supportEmail: "kanbanhikaku@gmail.com",
-  legal: {
-    sellerName: "倉岡 陸歩",
-    tradeName: "看板比較ナビ",
-    address: "（請求があれば遅滞なく開示）",
-    phone: "（請求があれば遅滞なく開示）",
-    email: "kanbanhikaku@gmail.com",
-    hours: "平日10:00–18:00（祝日除く）",
-    invoiceNumber: "（適格請求書発行事業者：未登録）",
-    payment: "Stripe（クレジットカード）での先払い",
-    delivery:
-      "要件確定後、原則24時間以内に比較レポートを納品。状況によってはそれ以上かかる場合がありますが、その場合は必ずご連絡いたします。",
-    returns: "役務提供の性質上、返金はできません（法令に基づく場合を除く）。",
-  },
-};
-
-// --- 事前スモークテスト（UIに影響しません） ---
-function runSmokeTests() {
-  console.assert(typeof config === "object", "config must be defined");
-  console.assert(config.supportEmail.includes("@"), "supportEmail should contain @");
-  console.assert(config.legal.email === config.supportEmail, "legal.email mirrors supportEmail");
-  console.assert(config.primaryCtaText.includes("¥15,000"), "CTA text includes price");
-  console.assert(config.tagline.includes("24時間"), "tagline mentions 24時間");
-  // ナビ用IDの存在検査（レンダ後に通る）
-  setTimeout(() => {
-    ["how", "pricing", "form", "faq", "privacy", "terms", "legal"].forEach((id) => {
-      const el = document.getElementById(id);
-      console.assert(el, `section #${id} should exist`);
-    });
-  }, 0);
-}
-
-const Section = ({ id, className = "", children }) => (
-  <section id={id} className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>
-    {children}
-  </section>
-);
-
-const Pill = ({ children }) => (
-  <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm text-emerald-900 bg-emerald-50 backdrop-blur border-emerald-200 shadow-sm">
-    {children}
-  </span>
-);
-
-const FeatureCard = ({ icon: Icon, title, children }) => (
-  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-    <div className="flex items-center gap-3">
-      <div className="rounded-xl border border-gray-200 p-2">
-        <Icon className="h-5 w-5" aria-hidden />
+    <!-- フォント & Tailwind CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji", "Segoe UI Symbol";
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-b from-emerald-50 via-sky-50 to-white text-gray-900"
+  >
+    <!-- Header -->
+    <header
+      class="sticky top-0 z-30 border-b border-gray-200/70 bg-white/80 backdrop-blur"
+    >
+      <div
+        class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white"
+          >
+            看
+          </div>
+          <div class="text-base font-semibold tracking-tight">看板比較ナビ</div>
+          <span
+            class="ml-2 hidden items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 shadow-sm md:inline-flex"
+          >
+            24時間以内に比較
+          </span>
+        </div>
+        <nav class="hidden items-center gap-6 text-sm text-gray-700 md:flex">
+          <a href="#how" class="hover:text-black">流れ</a>
+          <a href="#pricing" class="hover:text-black">料金</a>
+          <a href="#form" class="hover:text-black">申込み</a>
+          <a href="#faq" class="hover:text-black">FAQ</a>
+          <a href="#privacy" class="hover:text-black">プライバシー</a>
+          <a href="#terms" class="hover:text-black">利用規約</a>
+          <a href="#legal" class="hover:text-black">特商法</a>
+        </nav>
+        <a
+          href="https://buy.stripe.com/3cIcN6bY70wYahidMX4ZG00"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+        >
+          ¥15,000で比較レポートを依頼
+          <span aria-hidden="true">↗</span>
+        </a>
       </div>
-      <h3 className="text-base font-semibold">{title}</h3>
-    </div>
-    <div className="mt-3 text-sm leading-6 text-gray-600">{children}</div>
-  </div>
-);
+    </header>
 
-const Step = ({ step, title, icon: Icon, children }) => (
-  <div className="relative rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-    <div className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
-      STEP {step}
-    </div>
-    <div className="flex items-center gap-3">
-      <div className="rounded-xl border border-gray-200 p-2">
-        <Icon className="h-5 w-5" aria-hidden />
-      </div>
-      <h3 className="text-base font-semibold">{title}</h3>
-    </div>
-    <div className="mt-3 text-sm leading-6 text-gray-600">{children}</div>
-  </div>
-);
-
-export default function Landing() {
-  const [form, setForm] = useState({
-    goal: "",
-    period: "",
-    budget: "",
-    contact: "",
-    company: "",
-    campus: "",
-    memo: "",
-  });
-
-  useEffect(() => {
-    runSmokeTests();
-  }, []);
-
-  const onSubmit = (e) => {
-    e.preventDefault();
-    // 本番用：とりあえずはメールで相談してもらう運用に寄せる
-    const bodyLines = [
-      "以下の内容で比較レポートの相談をしたいです。",
-      "",
-      `目的: ${form.goal}`,
-      `期間: ${form.period}`,
-      `月予算: ${form.budget}`,
-      `想定キャンパス/エリア: ${form.campus}`,
-      `会社名: ${form.company}`,
-      `連絡先メール: ${form.contact}`,
-      `補足: ${form.memo}`,
-      "",
-      "看板比較ナビ LP フォームより",
-    ];
-
-    const params = new URLSearchParams({
-      subject: "【看板比較ナビ】比較レポートの相談",
-      body: bodyLines.join("\n"),
-    });
-
-    window.location.href = `mailto:${config.supportEmail}?${params.toString()}`;
-  };
-
-  const openStripe = () => {
-    window.open(config.primaryCtaLink, "_blank", "noopener");
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-sky-50 to-white text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-gray-200/70 bg-white/70 backdrop-blur">
-        <Section className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-semibold">
-              {config.brandName.slice(0, 1)}
+    <main>
+      <!-- Hero -->
+      <section
+        class="mx-auto max-w-7xl px-4 pt-14 pb-10 sm:px-6 lg:px-8"
+        id="top"
+      >
+        <div class="grid items-center gap-10 lg:grid-cols-2">
+          <div>
+            <span
+              class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 shadow-sm"
+              >24時間以内に比較</span
+            >
+            <h1
+              class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl leading-tight"
+            >
+              大学周辺の看板／駅貼り／サイネージを、<br
+                class="hidden sm:block"
+              />
+              <span class="text-emerald-700">24時間以内</span
+              >に比較レポートでご提案
+            </h1>
+            <p class="mt-4 max-w-xl text-sm leading-7 text-gray-700">
+              「看板比較ナビ」は、在庫を大量に並べるのではなく、<strong
+                >目的・期間・月予算</strong
+              >に沿って
+              <strong>駅・商業・路面・店頭・DOOH</strong> の中から候補を絞り込み、<strong
+                >3–5案の比較レポート（PDF/スプレッドシート）</strong
+              >でご提供します。契約は仲介と直接、当方は<strong
+                >紹介 / 情報提供のみ</strong
+              >です。
+            </p>
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <a
+                href="https://buy.stripe.com/3cIcN6bY70wYahidMX4ZG00"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+              >
+                ¥15,000で比較レポートを依頼
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a
+                href="#form"
+                class="text-sm font-semibold underline-offset-4 hover:underline"
+                >まずは要件を送る</a
+              >
             </div>
-            <div className="text-base font-semibold tracking-tight">{config.brandName}</div>
-            <div className="hidden md:block">
-              <Pill>24時間以内に比較</Pill>
+            <p class="mt-3 text-xs text-gray-500">
+              ※ボタンを押すと Stripe の決済ページ（外部サイト）が開きます。
+            </p>
+          </div>
+
+          <!-- Features -->
+          <div
+            class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+          >
+            <div class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2">
+              <div
+                class="rounded-2xl border border-gray-200 p-4 flex flex-col gap-1"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-xs"
+                    >駅/商</span
+                  >
+                  <span class="text-sm font-semibold">駅・商業施設</span>
+                </div>
+                <p class="text-xs sm:text-sm">
+                  駅構内/駅前、商業施設内のボードやサイネージ。
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 p-4 flex flex-col gap-1"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-xs"
+                    >路面</span
+                  >
+                  <span class="text-sm font-semibold">路面・店頭</span>
+                </div>
+                <p class="text-xs sm:text-sm">
+                  大学最寄り動線の路面看板や店頭広告。
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 p-4 flex flex-col gap-1"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-xs"
+                    >DOOH</span
+                  >
+                  <span class="text-sm font-semibold">デジタルサイネージ</span>
+                </div>
+                <p class="text-xs sm:text-sm">
+                  街頭/施設サイネージ。短期・スポット掲出もしやすい媒体。
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 p-4 flex flex-col gap-1"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-xs"
+                    >比較</span
+                  >
+                  <span class="text-sm font-semibold">比較レポート</span>
+                </div>
+                <p class="text-xs sm:text-sm">
+                  3–5案の比較表で、場所・サイズ・概算月額・開始時期を一覧化。
+                </p>
+              </div>
             </div>
           </div>
-          <nav className="hidden items-center gap-6 text-sm text-gray-700 md:flex">
-            <a href="#how" className="hover:text-black">
-              流れ
-            </a>
-            <a href="#pricing" className="hover:text-black">
-              料金
-            </a>
-            <a href="#form" className="hover:text-black">
-              申込み
-            </a>
-            <a href="#faq" className="hover:text-black">
-              FAQ
-            </a>
-            <a href="#privacy" className="hover:text-black">
-              プライバシー
-            </a>
-            <a href="#terms" className="hover:text-black">
-              利用規約
-            </a>
-            <a href="#legal" className="hover:text-black">
-              特商法
-            </a>
-          </nav>
-          <button
-            onClick={openStripe}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-          >
-            {config.primaryCtaText} <ArrowRight className="h-4 w-4" aria-hidden />
-          </button>
-        </Section>
-      </header>
-
-      {/* Hero */}
-      <Section className="pt-14 pb-10">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <Pill>24時間以内に比較</Pill>
-            <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">{config.tagline}</h1>
-            <p className="mt-4 max-w-xl text-gray-600">
-              {config.brandName} は、在庫を大量に並べるのではなく、目的・期間・月予算に沿って
-              <span className="font-semibold text-gray-900"> 駅・商業・路面・店頭・DOOH </span>
-              の中から候補を絞り込み、比較表でご提供します。契約は仲介と直接、当方は紹介/情報提供のみです。
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                onClick={openStripe}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-              >
-                {config.primaryCtaText} <ArrowRight className="h-4 w-4" aria-hidden />
-              </button>
-            <a href="#form" className="text-sm font-semibold underline-offset-4 hover:underline">
-              まずは要件を送る
-            </a>
-            </div>
-            <p className="mt-3 text-xs text-gray-500">
-              上記ボタンから Stripe の決済ページ（外部サイト）に遷移します。
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FeatureCard icon={Building2} title="駅・商業施設">
-                駅構内/駅前、商業施設内のボードやサイネージ。
-              </FeatureCard>
-              <FeatureCard icon={Store} title="路面・店頭">
-                大学最寄り動線の路面看板や店頭広告。
-              </FeatureCard>
-              <FeatureCard icon={Monitor} title="DOOH(デジタル)">
-                街頭/施設サイネージ。柔軟な掲出期間。
-              </FeatureCard>
-              <FeatureCard icon={FileText} title="比較レポート">
-                3–5案の比較表で意思決定を高速化。
-              </FeatureCard>
-            </div>
-          </motion.div>
         </div>
-      </Section>
+      </section>
 
-      {/* Flow */}
-      <Section id="how" className="py-14">
-        <h2 className="text-2xl font-bold tracking-tight">提供の流れ</h2>
-        <p className="mt-2 text-sm text-gray-600">対象：大学“周辺”OOH（駅・商業・路面・店頭、DOOH含む）</p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Step step={1} title="要件を送る" icon={Mail}>
-            目的、期間、月予算、想定キャンパスをフォームまたはメールで共有。
-          </Step>
-          <Step step={2} title="リサーチ（原則24h）" icon={Clock}>
-            最新情報を収集し、候補を3–5案に絞り込み。
-          </Step>
-          <Step step={3} title="比較レポ納品" icon={Shield}>
-            場所・サイズ・概算月額・最短開始・最低期間・写真・備考を一覧化。
-          </Step>
-          <Step step={4} title="見積/発注は仲介へ" icon={CreditCard}>
-            実際の見積取得・契約は、仲介や媒体社と直接やり取りいただきます。当方は紹介/情報提供のみです。
-          </Step>
+      <!-- Flow -->
+      <section
+        id="how"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <h2 class="text-2xl font-bold tracking-tight">提供の流れ</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          対象：大学“周辺”OOH（駅・商業・路面・店頭、DOOH含む）
+        </p>
+        <div class="mt-6 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            class="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
+            <div
+              class="absolute -top-3 left-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+            >
+              STEP 1
+            </div>
+            <p class="mb-2 font-semibold">要件を送る</p>
+            <p class="text-gray-700">
+              目的、期間、月予算、想定キャンパスをフォームまたはメールで共有いただきます。
+            </p>
+          </div>
+          <div
+            class="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
+            <div
+              class="absolute -top-3 left-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+            >
+              STEP 2
+            </div>
+            <p class="mb-2 font-semibold">リサーチ（原則24h）</p>
+            <p class="text-gray-700">
+              最新の在庫・価格情報を収集し、候補を3–5案に絞り込みます。
+            </p>
+          </div>
+          <div
+            class="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
+            <div
+              class="absolute -top-3 left-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+            >
+              STEP 3
+            </div>
+            <p class="mb-2 font-semibold">比較レポート納品</p>
+            <p class="text-gray-700">
+              場所・サイズ・概算月額・最短開始・最低期間・写真・備考を一覧化したレポートをお送りします。
+            </p>
+          </div>
+          <div
+            class="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
+            <div
+              class="absolute -top-3 left-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+            >
+              STEP 4
+            </div>
+            <p class="mb-2 font-semibold">見積/発注は仲介へ</p>
+            <p class="text-gray-700">
+              実際の見積取得・契約は、仲介会社や媒体社に直接お問い合わせいただきます。当方は情報提供・比較支援のみです。
+            </p>
+          </div>
         </div>
-      </Section>
+      </section>
 
-      {/* Pricing */}
-      <Section id="pricing" className="py-14">
-        <div className="grid items-start gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-gray-200 p-2">
-                <Clock className="h-5 w-5" />
+      <!-- Pricing -->
+      <section
+        id="pricing"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <div class="grid items-start gap-6 lg:grid-cols-2">
+          <div class="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="rounded-xl border border-gray-200 p-2">
+                <span class="text-sm">⏱</span>
               </div>
-              <h3 className="text-lg font-semibold">24h 比較レポート</h3>
+              <h3 class="text-lg font-semibold">24h 比較レポート</h3>
             </div>
-            <p className="mt-3 text-3xl font-extrabold">
-              ¥15,000<span className="text-base font-medium text-gray-500">（税込）</span>
+            <p class="mt-3 text-3xl font-extrabold">
+              ¥15,000
+              <span class="text-base font-medium text-gray-500">（税込）</span>
             </p>
-            <ul className="mt-4 space-y-2 text-sm text-gray-600">
-              <li className="flex gap-2">
-                <Check className="mt-0.5 h-4 w-4" /> 3–5案の比較表（PDF/スプレッドシート）
+            <ul class="mt-4 space-y-2 text-sm text-gray-600">
+              <li class="flex gap-2">
+                <span class="mt-0.5">✔</span> 3–5案の比較表（PDF/スプレッドシート）
               </li>
-              <li className="flex gap-2">
-                <Check className="mt-0.5 h-4 w-4" /> 掲出可否/最短開始/最低期間/概算月額
+              <li class="flex gap-2">
+                <span class="mt-0.5">✔</span>
+                掲出可否 / 最短開始 / 最低期間 / 概算月額
               </li>
-              <li className="flex gap-2">
-                <Check className="mt-0.5 h-4 w-4" /> 写真/地図リンク/備考（訴求メモ）
+              <li class="flex gap-2">
+                <span class="mt-0.5">✔</span> 写真 / 地図リンク / 備考（訴求メモ）
               </li>
             </ul>
-            <p className="mt-2 text-xs text-gray-500">
+            <p class="mt-2 text-xs text-gray-500">
               ※上記は基本構成です。案件状況により内容や点数は調整される場合があります。
             </p>
-            <button
-              onClick={openStripe}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+            <a
+              href="https://buy.stripe.com/3cIcN6bY70wYahidMX4ZG00"
+              target="_blank"
+              rel="noopener"
+              class="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
             >
-              {config.primaryCtaText} <ArrowRight className="h-4 w-4" />
-            </button>
-            <p className="mt-2 text-xs text-gray-500">
+              ¥15,000で比較レポートを依頼
+              <span aria-hidden="true">↗</span>
+            </a>
+            <p class="mt-2 text-xs text-gray-500">
               ボタンを押すと Stripe の決済ページ（外部サイト）が開きます。
             </p>
           </div>
 
-          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h3 className="text-lg font-semibold">ガードレール / 法務配慮</h3>
-            <ul className="mt-4 space-y-2 text-sm text-gray-600">
-              <li className="flex gap-2">
-                <Shield className="mt-0.5 h-4 w-4" />
-                <span>「最安/No.1」等の比較優位表現は根拠がある場合のみ使用し、基本的には控えます。</span>
+          <div class="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h3 class="text-lg font-semibold">ガードレール / 法務配慮</h3>
+            <ul class="mt-4 space-y-2 text-sm text-gray-600">
+              <li class="flex gap-2">
+                <span class="mt-0.5">🛡</span>
+                <span
+                  >「最安 / No.1」等の比較優位表現は根拠がある場合のみ使用し、基本的には控えます。</span
+                >
               </li>
-              <li className="flex gap-2">
-                <Shield className="mt-0.5 h-4 w-4" />
-                <span>当サイトは情報提供/比較支援であり、広告の販売・契約の当事者にはなりません。</span>
+              <li class="flex gap-2">
+                <span class="mt-0.5">🛡</span>
+                <span
+                  >当サイトは情報提供 / 比較支援であり、広告の販売・契約の当事者にはなりません。</span
+                >
               </li>
             </ul>
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* Form */}
-      <Section id="form" className="py-14">
-        <div className="grid gap-6 lg:grid-cols-2">
+      <!-- Form -->
+      <section
+        id="form"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <div class="grid gap-6 lg:grid-cols-2">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">申込みフォーム（所要2分）</h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <h2 class="text-2xl font-bold tracking-tight">
+              申込みフォーム（所要2分）
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
               入力後、「送信して相談を開始」を押すと、入力内容を反映したメール作成画面が開きます。
             </p>
-            <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <form id="contact-form" class="mt-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium">目的（自由記述）</label>
+                <label class="block text-sm font-medium">目的（自由記述）</label>
                 <input
                   required
-                  value={form.goal}
-                  onChange={(e) => setForm({ ...form, goal: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                  name="goal"
+                  class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                   placeholder="例）ブランド認知向上／サービス無料体験申込200件/週"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium">期間</label>
+                  <label class="block text-sm font-medium">期間</label>
                   <input
                     required
-                    value={form.period}
-                    onChange={(e) => setForm({ ...form, period: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    name="period"
+                    class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="例）2026/3〜2026/4の2ヶ月"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">月予算（税別）</label>
+                  <label class="block text-sm font-medium">月予算（税別）</label>
                   <input
                     required
-                    value={form.budget}
-                    onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    name="budget"
+                    class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="例）20万円"
                   />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium">想定キャンパス/エリア</label>
+                  <label class="block text-sm font-medium"
+                    >想定キャンパス/エリア</label
+                  >
                   <input
-                    value={form.campus}
-                    onChange={(e) => setForm({ ...form, campus: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    name="campus"
+                    class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="例）東大前/本郷三丁目 周辺"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">会社名（任意）</label>
+                  <label class="block text-sm font-medium">会社名（任意）</label>
                   <input
-                    value={form.company}
-                    onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                    name="company"
+                    class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="例）◯◯株式会社"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium">連絡先メール</label>
+                <label class="block text-sm font-medium">連絡先メール</label>
                 <input
                   type="email"
                   required
-                  value={form.contact}
-                  onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
+                  name="contact"
+                  class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                   placeholder="your@company.co.jp"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">補足（任意）</label>
+                <label class="block text-sm font-medium">補足（任意）</label>
                 <textarea
-                  value={form.memo}
-                  onChange={(e) => setForm({ ...form, memo: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-black focus:outline-none"
-                  rows={4}
+                  name="memo"
+                  rows="4"
+                  class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                   placeholder="訴求したい内容、避けたい場所 など"
-                />
+                ></textarea>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+                  class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
                 >
-                  送信して相談を開始 <ArrowRight className="h-4 w-4" />
+                  送信して相談を開始
                 </button>
-                <button
-                  type="button"
-                  onClick={() => window.open(`mailto:${config.supportEmail}`, "_blank")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+                <a
+                  href="mailto:kanbanhikaku@gmail.com"
+                  class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
                 >
-                  <Mail className="h-4 w-4" /> メールで直接相談
-                </button>
+                  メールで直接相談
+                </a>
               </div>
             </form>
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* FAQ */}
-      <Section id="faq" className="pb-16 pt-8">
-        <h2 className="text-2xl font-bold tracking-tight">FAQ</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-            <p className="font-semibold">本当に24時間で出ますか？</p>
-            <p className="mt-2 text-sm text-gray-600">
+      <!-- FAQ -->
+      <section
+        id="faq"
+        class="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8"
+      >
+        <h2 class="text-2xl font-bold tracking-tight">FAQ</h2>
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
+          >
+            <p class="font-semibold">本当に24時間で出ますか？</p>
+            <p class="mt-2 text-sm text-gray-600">
               原則24時間以内に比較レポートをお出しします。状況によってはそれ以上かかる場合がありますが、その際は必ずご連絡いたします。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-            <p className="font-semibold">対象エリアは？</p>
-            <p className="mt-2 text-sm text-gray-600">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
+          >
+            <p class="font-semibold">対象エリアは？</p>
+            <p class="mt-2 text-sm text-gray-600">
               全国主要都市の大学“周辺”をカバー。駅構内/駅前・商業施設・路面/店頭・DOOHが中心です。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-            <p className="font-semibold">契約・見積の流れは？</p>
-            <p className="mt-2 text-sm text-gray-600">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
+          >
+            <p class="font-semibold">契約・見積の流れは？</p>
+            <p class="mt-2 text-sm text-gray-600">
               当サイトは比較レポートを提供し、実際の契約や見積取得はご自身で仲介会社へ直接お問い合わせいただく形となります。
             </p>
           </div>
         </div>
-        <p className="mt-8 text-xs text-gray-500">
-          © {new Date().getFullYear()} {config.brandName}. All rights reserved.
+        <p class="mt-8 text-xs text-gray-500">
+          © <span id="year"></span> 看板比較ナビ. All rights reserved.
         </p>
-      </Section>
+      </section>
 
-      {/* Privacy */}
-      <Section id="privacy" className="py-14">
-        <h2 className="text-2xl font-bold tracking-tight">プライバシーポリシー（抜粋）</h2>
-        <div className="mt-6 grid gap-3 text-sm">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">取得する情報</p>
-            <p className="mt-1 text-gray-700">
+      <!-- Privacy -->
+      <section
+        id="privacy"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <h2 class="text-2xl font-bold tracking-tight">
+          プライバシーポリシー（抜粋）
+        </h2>
+        <div class="mt-6 grid gap-3 text-sm">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">取得する情報</p>
+            <p class="mt-1 text-gray-700">
               フォームに入力された氏名・会社名・メールアドレス・要件等。決済は決済事業者（Stripe）で処理され、当方はカード番号等を保持しません。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">利用目的</p>
-            <p className="mt-1 text-gray-700">見積・提案・連絡、サービス改善、法令遵守。</p>
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">利用目的</p>
+            <p class="mt-1 text-gray-700">
+              見積・提案・連絡、サービス改善、法令遵守。
+            </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">第三者提供</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">第三者提供</p>
+            <p class="mt-1 text-gray-700">
               法令に基づく場合を除き、本人の同意なく第三者提供しません。見積取得等で必要な範囲で仲介・媒体社と共有する場合があります。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">安全管理</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">安全管理</p>
+            <p class="mt-1 text-gray-700">
               アクセス制限や暗号化通信等、合理的な安全管理措置を講じます。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">開示等の請求</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">開示等の請求</p>
+            <p class="mt-1 text-gray-700">
               開示・訂正・利用停止等のご請求は、
-              <a className="underline" href={`mailto:${config.legal.email}`}>
-                {config.legal.email}
-              </a>{" "}
+              <a class="underline" href="mailto:kanbanhikaku@gmail.com"
+                >kanbanhikaku@gmail.com</a
+              >
               までご連絡ください。
             </p>
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* Terms */}
-      <Section id="terms" className="py-14">
-        <h2 className="text-2xl font-bold tracking-tight">利用規約（抜粋）</h2>
-        <div className="mt-6 grid gap-3 text-sm">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">1. 役務の範囲</p>
-            <p className="mt-1 text-gray-700">
+      <!-- Terms -->
+      <section
+        id="terms"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <h2 class="text-2xl font-bold tracking-tight">利用規約（抜粋）</h2>
+        <div class="mt-6 grid gap-3 text-sm">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">1. 役務の範囲</p>
+            <p class="mt-1 text-gray-700">
               本サービスは屋外広告（看板／駅貼り／サイネージ等）の比較情報提供および仲介先の紹介を行うもので、広告媒体の販売・契約当事者にはなりません。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">2. 料金・支払</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">2. 料金・支払</p>
+            <p class="mt-1 text-gray-700">
               比較レポートは Stripe によるクレジットカード前払いとします。契約・見積の取得は利用者ご自身で仲介会社に直接お問い合わせください。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">3. 返金</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">3. 返金</p>
+            <p class="mt-1 text-gray-700">
               役務の性質上、返金はできません（法令に基づく場合を除く）。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">4. 免責</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">4. 免責</p>
+            <p class="mt-1 text-gray-700">
               価格・在庫・開始時期等は媒体社・仲介各社の回答に依存し変動します。最終決定は当該事業者との契約条件に従います。
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <p className="font-semibold">5. 禁止事項</p>
-            <p className="mt-1 text-gray-700">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
+            <p class="font-semibold">5. 禁止事項</p>
+            <p class="mt-1 text-gray-700">
               虚偽情報の提供、法令・ガイドラインに反するクリエイティブの入稿、第三者の権利侵害等。
             </p>
           </div>
         </div>
-      </Section>
+      </section>
 
-      {/* Legal */}
-      <Section id="legal" className="py-14">
-        <h2 className="text-2xl font-bold tracking-tight">特定商取引法に基づく表記</h2>
-        <div className="mt-6 grid gap-3 text-sm">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+      <!-- Legal -->
+      <section
+        id="legal"
+        class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+      >
+        <h2 class="text-2xl font-bold tracking-tight">
+          特定商取引法に基づく表記
+        </h2>
+        <div class="mt-6 grid gap-3 text-sm">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
             <p>
-              <span className="font-semibold">事業者の氏名（名称）：</span>
-              {config.legal.sellerName}（屋号：{config.legal.tradeName}）
+              <span class="font-semibold">事業者の氏名（名称）：</span>倉岡
+              陸歩（屋号：看板比較ナビ）
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">所在地：</span>
-              {config.legal.address}
+            <p class="mt-1">
+              <span class="font-semibold">所在地：</span>（請求があれば遅滞なく開示）
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">電話番号：</span>
-              {config.legal.phone}
+            <p class="mt-1">
+              <span class="font-semibold">電話番号：</span>（請求があれば遅滞なく開示）
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">メールアドレス：</span>
-              <a className="underline" href={`mailto:${config.legal.email}`}>
-                {config.legal.email}
-              </a>
+            <p class="mt-1">
+              <span class="font-semibold">メールアドレス：</span
+              ><a class="underline" href="mailto:kanbanhikaku@gmail.com"
+                >kanbanhikaku@gmail.com</a
+              >
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">営業時間：</span>
-              {config.legal.hours}
+            <p class="mt-1">
+              <span class="font-semibold">営業時間：</span>平日10:00–18:00（祝日除く）
             </p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+          <div
+            class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm"
+          >
             <p>
-              <span className="font-semibold">販売価格：</span>
-              比較レポート 一律 ¥15,000（税込）
+              <span class="font-semibold">販売価格：</span>比較レポート 一律
+              ¥15,000（税込）
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">代金の支払方法・時期：</span>
-              {config.legal.payment}
+            <p class="mt-1">
+              <span class="font-semibold">代金の支払方法・時期：</span
+              >Stripe（クレジットカード）での先払い
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">役務の提供時期：</span>
-              {config.legal.delivery}
+            <p class="mt-1">
+              <span class="font-semibold">役務の提供時期：</span
+              >要件確定後、原則24時間以内に比較レポートを納品。状況によってはそれ以上かかる場合がありますが、その場合は必ずご連絡いたします。
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">返品・キャンセル：</span>
-              {config.legal.returns}
+            <p class="mt-1">
+              <span class="font-semibold">返品・キャンセル：</span
+              >役務提供の性質上、返金はできません（法令に基づく場合を除く）。
             </p>
-            <p className="mt-1">
-              <span className="font-semibold">適格請求書発行事業者：</span>
-              {config.legal.invoiceNumber}
+            <p class="mt-1">
+              <span class="font-semibold">適格請求書発行事業者：</span
+              >（適格請求書発行事業者：未登録）
             </p>
           </div>
-          <p className="text-xs text-gray-500">
+          <p class="text-xs text-gray-500">
             ※個人事業主の特例により、所在地・電話番号は「請求があれば遅滞なく開示」の運用も選択可能です。実運用に応じて記載方式をご調整ください。
           </p>
         </div>
-      </Section>
-    </div>
-  );
-}
+      </section>
+    </main>
+
+    <script>
+      // 年号
+      document.getElementById("year").textContent =
+        new Date().getFullYear().toString();
+
+      // フォーム → mailto でメール作成
+      const form = document.getElementById("contact-form");
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          const data = new FormData(form);
+
+          const bodyLines = [
+            "以下の内容で比較レポートの相談をしたいです。",
+            "",
+            "目的: " + (data.get("goal") || ""),
+            "期間: " + (data.get("period") || ""),
+            "月予算: " + (data.get("budget") || ""),
+            "想定キャンパス/エリア: " + (data.get("campus") || ""),
+            "会社名: " + (data.get("company") || ""),
+            "連絡先メール: " + (data.get("contact") || ""),
+            "補足: " + (data.get("memo") || ""),
+            "",
+            "看板比較ナビ LP フォームより",
+          ];
+
+          const params = new URLSearchParams({
+            subject: "【看板比較ナビ】比較レポートの相談",
+            body: bodyLines.join("\n"),
+          });
+
+          window.location.href =
+            "mailto:kanbanhikaku@gmail.com?" + params.toString();
+        });
+      }
+    </script>
+  </body>
+</html>
